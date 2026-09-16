@@ -52,3 +52,17 @@ def buscar_clima_todas(cidades: list[dict]) -> list[dict]:
         except requests.RequestException as e:
             resultado.append({"cidade": c["nome"], "erro": str(e)})
     return resultado
+
+
+# Grupos de códigos WMO -> símbolo do painel (ícones de linha definidos no template)
+_ICONES = {
+    "sol": {0}, "sol-nuvem": {1, 2}, "nuvem": {3}, "neblina": {45, 48},
+    "garoa": {51, 53, 55}, "chuva": {61, 63, 65, 80, 81, 82},
+    "neve": {71, 73, 75}, "tempestade": {95, 96, 99},
+}
+_ICONE_POR_TEXTO = {CODIGOS_WMO[c]: nome for nome, codigos in _ICONES.items() for c in codigos}
+
+
+def icone(condicao: str) -> str:
+    """Nome do ícone para uma descrição de condição gravada no banco."""
+    return _ICONE_POR_TEXTO.get(condicao, "nuvem")

@@ -145,9 +145,24 @@ def montar_contexto(dados: dict) -> dict:
         serie.reverse()
         ultimas[par]["serie"] = [v for v in serie if v is not None][-12:]
 
-    ultimo_clima = {}
+    # Último clima por cidade + série de temperatura + ícone + posição na régua de limites
+    ultimo_clima, series_t = {}, {}
     for c in dados["clima"]:
-        ultimo_clima.setdefault(c.get("Cidade"), c)
+        cid = c.get("Cidade")
+        ultimo_clima.setdefault(cid, c)
+        series_t.setdefault(cid, []).append(c.get("Temperatura"))
+    lo, hi = config.LIMITE_TEMP_MIN - 10, config.LIMITE_TEMP_MAX + 10
+    for cid, c in ultimo_clima.items():
+        serie = [v for v in reversed(series_t[cid]) if v is not None][-12:]
+        c["serie"] = serie
+        c["icone"] = clima.icone(c.get("Condicao", ""))
+        t = c.get("Temperatura")
+        c["pos"] = None if t is None else max(0, min(100, (t - lo) / (hi - lo) * 100))
+        if t is not None and c.get("SensacaoTermica") is not None:
+            c["delta_sensacao"] = c["SensacaoTermica"] - t
+    regua = {"lo": lo, "hi": hi,
+             "min_pct": (config.LIMITE_TEMP_MIN - lo) / (hi - lo) * 100,
+             "max_pct": (config.LIMITE_TEMP_MAX - lo) / (hi - lo) * 100}
 
     # Alertas: abertos agrupados por título (com contagem de ocorrências), depois os resolvidos
     abertos, resolvidos = {}, []
@@ -188,6 +203,7 @@ def montar_contexto(dados: dict) -> dict:
         "abertos": lista_abertos,
         "resolvidos": resolvidos[:6],
         "estado": estado,
+        "regua": regua,
         "historico": dados["cotacoes"][:12],
         "erro": dados["erro"],
         "kpis": {"abertos": len(lista_abertos), "criticos": criticos, "ultima": ultima_coleta,

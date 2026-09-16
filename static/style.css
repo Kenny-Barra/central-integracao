@@ -132,16 +132,32 @@ main.wrap { padding-top: 1.75rem; padding-bottom: 2.5rem; display: grid; gap: 2.
 .tile.alerting .top { padding-right: 7.5rem; }
 
 /* weather tiles */
-.wx { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem .9rem; display: grid; gap: .6rem; }
-.wx .top { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
-.wx .city { font-family: var(--font-display); font-weight: 600; font-size: 1rem; }
-.wx .wmo { font-family: var(--font-mono); font-size: .68rem; color: var(--muted); border: 1px solid var(--border); padding: .1rem .4rem; border-radius: 5px; white-space: nowrap; }
-.wx .temp { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.85rem; font-weight: 500; line-height: 1.05; }
+.wx { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem .9rem; display: grid; gap: .8rem; }
+.wx-top { display: grid; grid-template-columns: auto 1fr auto; gap: .8rem; align-items: center; }
+.wx-icon { width: 40px; height: 40px; fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.wx .city { font-family: var(--font-display); font-weight: 600; font-size: 1rem; line-height: 1.15; }
+.wx .cond { color: var(--text-2); font-size: .8rem; }
+.wx .temp { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.85rem; font-weight: 500; line-height: 1; text-align: right; display: grid; gap: .2rem; }
 .wx .temp small { font-size: .85rem; color: var(--muted); margin-left: .1rem; }
-.wx .cond { color: var(--text-2); font-size: .82rem; }
-.wx .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; padding-top: .6rem; border-top: 1px solid var(--border); }
-.wx .stats span { font-size: .66rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-.wx .stats b { display: block; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; font-size: .86rem; color: var(--text); letter-spacing: 0; text-transform: none; white-space: nowrap; }
+.wx .feels { font-family: var(--font-body); font-size: .7rem; color: var(--muted); font-weight: 400; }
+.gauge { display: grid; gap: .3rem; }
+.gauge .track { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--border); }
+.gauge .zone { position: absolute; top: 0; bottom: 0; }
+.gauge .zone.cold { left: 0; background: var(--accent-soft); border-radius: 3px 0 0 3px; }
+.gauge .zone.hot { background: var(--crit-soft); border-radius: 0 3px 3px 0; }
+.gauge .tick { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--border-strong); transform: translateX(-.5px); }
+.gauge .marker { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--text); border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--text); transform: translate(-50%, -50%); }
+.wx.hot .gauge .marker { background: var(--crit); box-shadow: 0 0 0 1.5px var(--crit); }
+.wx.cold .gauge .marker { background: var(--accent); box-shadow: 0 0 0 1.5px var(--accent); }
+.gauge .labels { position: relative; height: .9rem; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .64rem; color: var(--muted); }
+.gauge .labels span { position: absolute; top: 0; transform: translateX(-50%); }
+.gauge .labels span:first-child { transform: none; left: 0; }
+.gauge .labels .end { right: 0; transform: none; }
+.wx .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; padding-top: .7rem; border-top: 1px solid var(--border); align-items: end; }
+.wx .stats span { font-size: .64rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.wx .stats b { display: block; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; font-size: .86rem; color: var(--text); letter-spacing: 0; text-transform: none; white-space: nowrap; margin-top: .1rem; }
+.wx .stats b.warn { color: var(--warn); }
+.wx .stats .trend .spark-sm { height: 22px; margin-top: .15rem; }
 .wx.hot { border-color: color-mix(in srgb, var(--crit) 55%, var(--border)); }
 .wx.cold { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
 .wx.rain { border-color: color-mix(in srgb, var(--warn) 55%, var(--border)); }
@@ -179,4 +195,4 @@ td.up { color: var(--ok); } td.down { color: var(--crit); }
 footer.wrap { padding-top: 1rem; padding-bottom: 2.5rem; color: var(--muted); font-size: .74rem; display: flex; flex-wrap: wrap; gap: .5rem 1rem; border-top: 1px solid var(--border); }
 footer .grow { flex: 1; }
 
-@media (max-width: 760px) { .sources { display: none; } .topbar .wrap { gap: .75rem; } .brand .sub { display: none; } .wx .stats { grid-template-columns: repeat(2, 1fr); } .state .when { margin-left: 0; } }
+@media (max-width: 760px) { .sources { display: none; } .topbar .wrap { gap: .75rem; } .brand .sub { display: none; } .wx .stats { grid-template-columns: repeat(2, 1fr); } .wx-icon { width: 32px; height: 32px; } .state .when { margin-left: 0; } }

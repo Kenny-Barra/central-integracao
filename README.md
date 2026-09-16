@@ -34,7 +34,7 @@ Aplicação web em **Python + Flask** que consome **duas APIs públicas** (cota�
 | **Banco No-Code** | Airtable — tabelas `Cotacoes`, `Clima`, `Alertas` |
 | **Autenticação** | Bearer token (Airtable) · `X-API-Key` (rotas de escrita da Central) |
 | **Automações** | 4 regras: dólar acima do limite, variação brusca, temperatura extrema, chuva forte |
-| **Interface** | Dashboard web: linha de estado em palavras, tiles de câmbio com sparkline e spread, clima por cidade, alertas agrupados por severidade, histórico, tema claro/escuro + API REST própria (`/api/*`) |
+| **Interface** | Dashboard web: linha de estado em palavras, tiles de câmbio com sparkline e spread, clima com símbolo WMO, régua de temperatura com os limites de alerta e tendência, alertas agrupados por severidade, histórico, tema claro/escuro + API REST própria (`/api/*`) |
 | **Dados monitorados** | USD-BRL · EUR-BRL · BTC-BRL · clima de São Paulo, Rio de Janeiro e Curitiba |
 
 ---
@@ -112,7 +112,7 @@ Decisões de projeto: **histórico** (cada sincronização gera novos registros,
 | Origem | Como chega | Tratamento aplicado |
 |---|---|---|
 | AwesomeAPI | `"bid": "5.1529"` (string) | `float()` com tolerância a valor ausente; chave `USDBRL` → `USD-BRL` |
-| Open-Meteo | `"weather_code": 61` | tabela WMO → `"Chuva leve"` (pt-BR) |
+| Open-Meteo | `"weather_code": 61` | tabela WMO → `"Chuva leve"` (pt-BR) e grupo de símbolo (sol, nuvem, garoa, chuva, neve, tempestade, neblina) |
 | Ambas | campos com nomes diferentes | padronização: `coletado_em` (UTC ISO 8601) e `fonte` em todo registro |
 | Airtable | limite de 10 registros/req | gravação em lotes; `typecast: true` para selects |
 | Dashboard | ISO em UTC | filtro Jinja `data_br` → `dd/mm/aaaa HH:MM` no fuso de Brasília |

@@ -14,6 +14,18 @@
 </head>
 <body>
 
+<!-- Símbolos meteorológicos (grupos de código WMO) — ícones de linha, desenhados uma vez -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></symbol>
+  <symbol id="i-sol-nuvem" viewBox="0 0 24 24"><circle cx="8" cy="7.5" r="3"/><path d="M8 1.5V3M8 12v1.5M2 7.5h1.5M12.5 7.5H14M3.8 3.3l1 1M11.2 11.7l1 1M3.8 11.7l1-1M11.2 3.3l1-1"/><path d="M18 21.5a3.5 3.5 0 0 0 .6-6.95A5.5 5.5 0 0 0 8 15.9 2.8 2.8 0 0 0 8.5 21.5H18z"/></symbol>
+  <symbol id="i-nuvem" viewBox="0 0 24 24"><path d="M18 19a4.5 4.5 0 0 0 .5-8.97A7 7 0 0 0 5 12.3 3.5 3.5 0 0 0 6.5 19H18z"/></symbol>
+  <symbol id="i-neblina" viewBox="0 0 24 24"><path d="M18 14a4.5 4.5 0 0 0 .5-8.97A7 7 0 0 0 5 7.3 3.5 3.5 0 0 0 6.5 14H18z"/><path d="M4 18h16M7 21.5h10"/></symbol>
+  <symbol id="i-garoa" viewBox="0 0 24 24"><path d="M18 14a4.5 4.5 0 0 0 .5-8.97A7 7 0 0 0 5 7.3 3.5 3.5 0 0 0 6.5 14H18z"/><path d="M8 17v1.5M8 21v1.5M12 18.5v1.5M12 22v.5M16 17v1.5M16 21v1.5"/></symbol>
+  <symbol id="i-chuva" viewBox="0 0 24 24"><path d="M18 13a4.5 4.5 0 0 0 .5-8.97A7 7 0 0 0 5 6.3 3.5 3.5 0 0 0 6.5 13H18z"/><path d="M8 16l-1.5 4M12 16l-1.5 4M16 16l-1.5 4M10 21l-.7 2M14 21l-.7 2"/></symbol>
+  <symbol id="i-neve" viewBox="0 0 24 24"><path d="M18 13a4.5 4.5 0 0 0 .5-8.97A7 7 0 0 0 5 6.3 3.5 3.5 0 0 0 6.5 13H18z"/><path d="M8 17h.01M8 21h.01M12 19h.01M12 23h.01M16 17h.01M16 21h.01" stroke-width="2.4"/></symbol>
+  <symbol id="i-tempestade" viewBox="0 0 24 24"><path d="M18 12a4.5 4.5 0 0 0 .5-8.97A7 7 0 0 0 5 5.3 3.5 3.5 0 0 0 6.5 12H18z"/><path d="M13 11l-3.5 5.5H13L10.5 22"/></symbol>
+</svg>
+
 <header class="topbar">
   <div class="wrap">
     <div class="brand">
@@ -98,25 +110,57 @@
   <section aria-labelledby="h-clima">
     <div class="head">
       <h2 id="h-clima">Clima agora</h2>
-      <span class="hint">Open-Meteo · códigos WMO</span>
+      <span class="hint">Open-Meteo · condição pelo código WMO</span>
       <span class="right">alerta se T ≥ {{ limites.temp_max|int }}°C, T ≤ {{ limites.temp_min|int }}°C ou chuva ≥ {{ limites.chuva|int }} mm</span>
     </div>
     <div class="tiles">
       {% for c in clima %}
       {% set t = c.Temperatura or 0 %}
       {% set cls = 'hot' if t >= limites.temp_max else ('cold' if t <= limites.temp_min else ('rain' if (c.Chuva or 0) >= limites.chuva else '')) %}
+      {% set sp = c.serie|sparkline(300, 36) %}
       <article class="wx {{ cls }}">
-        <div class="top">
-          <div class="city">{{ c.Cidade }}</div>
-          <span class="wmo" title="Código WMO da condição">{{ c.Condicao }}</span>
+        <div class="wx-top">
+          <svg class="wx-icon" aria-hidden="true"><use href="#i-{{ c.icone }}"/></svg>
+          <div>
+            <div class="city">{{ c.Cidade }}</div>
+            <div class="cond">{{ c.Condicao }}</div>
+          </div>
+          <div class="temp"><span>{{ "%.1f"|format(t) }}<small>°C</small></span>
+            {% if c.delta_sensacao is defined %}<span class="feels">sensação {{ "%+.1f"|format(c.delta_sensacao) }}°</span>{% endif %}
+          </div>
         </div>
-        <div class="temp">{{ "%.1f"|format(t) }}<small>°C</small></div>
-        <div class="cond">sensação térmica {{ c.SensacaoTermica }}°C</div>
+
+        <!-- Régua: onde a leitura está em relação aos limites da automação -->
+        {% if c.pos is not none %}
+        <div class="gauge" role="img" aria-label="Temperatura {{ t }}°C numa régua de {{ regua.lo|int }} a {{ regua.hi|int }}°C; alerta abaixo de {{ limites.temp_min|int }} e acima de {{ limites.temp_max|int }}">
+          <div class="track">
+            <div class="zone cold" style="width: {{ '%.1f'|format(regua.min_pct) }}%"></div>
+            <div class="zone hot" style="left: {{ '%.1f'|format(regua.max_pct) }}%; width: {{ '%.1f'|format(100 - regua.max_pct) }}%"></div>
+            <span class="tick" style="left: {{ '%.1f'|format(regua.min_pct) }}%"></span>
+            <span class="tick" style="left: {{ '%.1f'|format(regua.max_pct) }}%"></span>
+            <span class="marker" style="left: {{ '%.1f'|format(c.pos) }}%"></span>
+          </div>
+          <div class="labels">
+            <span>{{ regua.lo|int }}°</span>
+            <span style="left: {{ '%.1f'|format(regua.min_pct) }}%">{{ limites.temp_min|int }}°</span>
+            <span style="left: {{ '%.1f'|format(regua.max_pct) }}%">{{ limites.temp_max|int }}°</span>
+            <span class="end">{{ regua.hi|int }}°</span>
+          </div>
+        </div>
+        {% endif %}
+
         <div class="stats">
           <span>umidade<b>{{ c.Umidade }}%</b></span>
           <span>vento<b>{{ c.Vento }} km/h</b></span>
-          <span>chuva<b>{{ c.Chuva }} mm</b></span>
-          <span>coleta<b>{{ (c.ColetadoEm|data_br)[-5:] }}</b></span>
+          <span>chuva<b class="{{ 'warn' if (c.Chuva or 0) >= limites.chuva }}">{{ c.Chuva }} mm</b></span>
+          <span class="trend">tendência
+            {% if sp %}
+            <svg class="spark spark-sm" viewBox="0 0 {{ sp.w }} {{ sp.h }}" preserveAspectRatio="none" aria-label="Temperatura nas últimas {{ c.serie|length }} coletas">
+              <polygon class="area" points="{{ sp.area }}"></polygon>
+              <polyline class="line" points="{{ sp.linha }}"></polyline>
+            </svg>
+            {% else %}<b>—</b>{% endif %}
+          </span>
         </div>
       </article>
       {% else %}

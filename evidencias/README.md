@@ -4,7 +4,7 @@ Prints que comprovam o sistema funcionando.
 
 ## Dashboard (interface da Central)
 
-Linha de estado em palavras (colorida pela pior severidade), tiles de câmbio com sparkline e spread, clima por cidade, alertas abertos agrupados e resolvidos, histórico de coletas. Tema claro/escuro pelo botão ◐. Versão navegável: https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada
+Linha de estado em palavras (colorida pela pior severidade), tiles de câmbio com sparkline e spread, clima por cidade com símbolo da condição (WMO), régua de temperatura mostrando a distância até os limites de alerta e tendência das coletas, alertas abertos agrupados e resolvidos, histórico de coletas. Tema claro/escuro pelo botão ◐. Versão navegável: https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada
 
 ![Dashboard](01-dashboard.png)
 
