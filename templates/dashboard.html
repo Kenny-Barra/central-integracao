@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Central Inteligente de Monitoramento</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Central Inteligente de Monitoramento</h1>
+    <p class="sub">AwesomeAPI (cotações) + Open-Meteo (clima) &rarr; Airtable &rarr; alertas automáticos</p>
+  </div>
+  <form method="post" action="{{ url_for('sincronizar_web') }}" class="sync">
+    <input type="password" name="api_key" placeholder="Chave da API" required>
+    <button type="submit">&#8635; Sincronizar agora</button>
+  </form>
+</header>
+
+{% with mensagens = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in mensagens %}
+    <div class="flash {{ cat }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+{% if erro %}<div class="flash erro">{{ erro }}</div>{% endif %}
+
+<main>
+  <section>
+    <h2>Cotações <small>última coleta por par</small></h2>
+    <div class="cards">
+      {% for c in cotacoes %}
+      <div class="card">
+        <div class="par">{{ c.Par }}</div>
+        <div class="valor">R$ {{ "%.4f"|format(c.Compra or 0) }}</div>
+        <div class="var {{ 'up' if (c.Variacao or 0) >= 0 else 'down' }}">
+          {{ "%+.2f"|format(c.Variacao or 0) }}% no dia
+        </div>
+        <div class="meta">máx {{ c.Maxima }} · mín {{ c.Minima }}<br>{{ c.ColetadoEm|data_br }}</div>
+      </div>
+      {% else %}<p class="vazio">Nenhuma cotação ainda. Clique em “Sincronizar agora”.</p>{% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2>Clima <small>última coleta por cidade</small></h2>
+    <div class="cards">
+      {% for c in clima %}
+      <div class="card">
+        <div class="par">{{ c.Cidade }}</div>
+        <div class="valor">{{ c.Temperatura }}°C</div>
+        <div class="meta">{{ c.Condicao }}<br>sensação {{ c.SensacaoTermica }}°C · umidade {{ c.Umidade }}%<br>
+          vento {{ c.Vento }} km/h · chuva {{ c.Chuva }} mm</div>
+      </div>
+      {% else %}<p class="vazio">Nenhum dado climático ainda.</p>{% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2>Alertas automáticos
+      <small>regras: dólar &gt; R$ {{ limites.dolar }} · variação ≥ 3% · temp ≥ {{ limites.temp_max }}°C ou ≤ {{ limites.temp_min }}°C · chuva ≥ {{ limites.chuva }} mm</small>
+    </h2>
+    <table>
+      <thead><tr><th>Quando</th><th>Tipo</th><th>Severidade</th><th>Alerta</th><th>Valor / Limite</th><th></th></tr></thead>
+      <tbody>
+      {% for a in alertas %}
+        <tr class="{{ 'resolvido' if a.Resolvido }}">
+          <td>{{ a.CriadoEm|data_br }}</td>
+          <td>{{ a.Tipo }}</td>
+          <td><span class="sev {{ a.Severidade }}">{{ a.Severidade }}</span></td>
+          <td><strong>{{ a.Titulo }}</strong><br><span class="meta">{{ a.Mensagem }}</span></td>
+          <td>{{ a.Valor }} / {{ a.Limite }}</td>
+          <td>
+            {% if not a.Resolvido %}
+            <form method="post" action="{{ url_for('resolver_alerta', record_id=a.id) }}" class="inline">
+              <input type="password" name="api_key" placeholder="chave" required size="8">
+              <button type="submit">Resolver</button>
+            </form>
+            {% else %}✔{% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="vazio">Nenhum alerta gerado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Histórico recente de cotações</h2>
+    <table>
+      <thead><tr><th>Coletado em</th><th>Par</th><th>Compra</th><th>Venda</th><th>Variação</th><th>Fonte</th></tr></thead>
+      <tbody>
+      {% for c in historico %}
+        <tr><td>{{ c.ColetadoEm|data_br }}</td><td>{{ c.Par }}</td><td>{{ c.Compra }}</td><td>{{ c.Venda }}</td><td>{{ c.Variacao }}%</td><td>{{ c.Fonte }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<footer>
+  Endpoints: <code>GET /api/cotacoes</code> · <code>GET /api/clima</code> · <code>GET /api/alertas</code> ·
+  <code>GET /api/ao-vivo</code> · <code>POST /api/sincronizar</code> (header <code>X-API-Key</code>)
+</footer>
+</body>
+</html>
