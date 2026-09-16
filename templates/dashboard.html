@@ -15,147 +15,119 @@
 <body>
 
 <header class="topbar">
-  <div class="brand">
-    <div class="brand-mark" aria-hidden="true">CM</div>
-    <h1>Central de Monitoramento
-      <span class="sub">Câmbio · Clima · Alertas — AwesomeAPI + Open-Meteo → Airtable</span>
-    </h1>
-  </div>
-
-  <div class="sources" aria-label="Estado das fontes">
-    {% for f in fontes %}
-    <span class="source"><span class="dot {{ '' if f.ok else 'off' }}"></span>{{ f.nome }}</span>
-    {% endfor %}
-    {% if kpis.ultima %}<span class="source num">última coleta {{ kpis.ultima|data_br }}</span>{% endif %}
-  </div>
-
-  <div class="topbar-actions">
-    {% if not demo %}
-    <form method="post" action="{{ url_for('sincronizar_web') }}" class="sync">
-      <input type="password" name="api_key" placeholder="Chave da API" aria-label="Chave da API" required>
-      <button type="submit" class="btn">Sincronizar</button>
-    </form>
-    {% endif %}
-    <button type="button" class="btn btn-ghost theme-toggle" id="tema" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">CM</div>
+      <h1>Central de Monitoramento<span class="sub">Câmbio · Clima · Alertas</span></h1>
+    </div>
+    <div class="sources" aria-label="Estado das fontes">
+      {% for f in fontes %}<span class="source"><span class="dot {{ '' if f.ok else 'off' }}"></span>{{ f.nome }}</span>{% endfor %}
+    </div>
+    <div class="actions">
+      {% if not demo %}
+      <form method="post" action="{{ url_for('sincronizar_web') }}" class="keygroup">
+        <input type="password" name="api_key" placeholder="Chave da API" aria-label="Chave da API" required>
+        <button type="submit" class="btn">Sincronizar</button>
+      </form>
+      {% endif %}
+      <button type="button" class="btn btn-ghost theme-toggle" id="tema" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+    </div>
   </div>
 </header>
 
-{% if demo %}
-<div class="flash aviso">Demonstração estática com dados reais coletados em {{ kpis.ultima|data_br }}. No projeto em execução, o botão <strong>Sincronizar</strong> consulta as APIs e grava no Airtable.</div>
-{% endif %}
+<!-- A leitura mais importante da página, em palavras -->
+<div class="state {{ estado.nivel }}">
+  <div class="wrap">
+    <span class="beacon" aria-hidden="true"></span>
+    <span class="text">{{ estado.texto }}</span>
+    {% if estado.detalhe %}<span class="detail">{{ estado.detalhe }}</span>{% endif %}
+    {% if kpis.ultima %}<span class="when">última coleta {{ kpis.ultima|data_br }}</span>{% endif %}
+  </div>
+</div>
 
+{% if demo %}
+<div class="flash aviso">Demonstração estática com dados reais coletados em {{ kpis.ultima|data_br }}. No projeto em execução, <strong>Sincronizar</strong> consulta as APIs e grava no Airtable.</div>
+{% endif %}
 {% with mensagens = get_flashed_messages(with_categories=true) %}
   {% for cat, msg in mensagens %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
 {% endwith %}
-{% if erro %}<div class="flash erro">{{ erro }}</div>{% endif %}
 
-<main>
+<main class="wrap">
 
-  <!-- KPIs -->
-  <section aria-label="Resumo">
-    <div class="kpis">
-      <div class="kpi">
-        <span class="eyebrow">Alertas abertos</span>
-        <span class="value {{ 'crit' if kpis.criticos else ('warn' if kpis.abertos else 'ok') }}">{{ kpis.abertos }}</span>
-        <span class="delta">{{ kpis.criticos }} crítico{{ 's' if kpis.criticos != 1 }}</span>
-      </div>
-      {% for c in cotacoes if c.Par == 'USD-BRL' %}
-      <div class="kpi">
-        <span class="eyebrow">Dólar (compra)</span>
-        <span class="value">R$ {{ "%.4f"|format(c.Compra or 0) }}</span>
-        <span class="delta">limite de alerta R$ {{ "%.2f"|format(limites.dolar) }}</span>
-      </div>
+  <!-- Câmbio -->
+  <section aria-labelledby="h-cambio">
+    <div class="head">
+      <h2 id="h-cambio">Câmbio</h2>
+      <span class="hint">compra · AwesomeAPI</span>
+      <span class="right">limite de alerta USD-BRL R$ {{ "%.2f"|format(limites.dolar) }}</span>
+    </div>
+    <div class="tiles">
+      {% for c in cotacoes %}
+      {% set v = c.Variacao or 0 %}
+      {% set sp = c.serie|sparkline(300, 44) %}
+      {% set grande = (c.Compra or 0) >= 1000 %}
+      <article class="tile {{ 'alerting' if c.Par == 'USD-BRL' and (c.Compra or 0) > limites.dolar }}">
+        <div class="top">
+          <div><div class="pair">{{ c.Par }}</div><div class="name">{{ c.Nome }}</div></div>
+        </div>
+        <div class="top">
+          <div class="price"><small>R$</small>{{ "{:,.0f}".format(c.Compra or 0).replace(',', '.') if grande else "%.4f"|format(c.Compra or 0) }}</div>
+          <span class="chg {{ 'up' if v > 0 else ('down' if v < 0 else 'flat') }}">{{ '▲' if v > 0 else ('▼' if v < 0 else '•') }} {{ "%+.2f"|format(v) }}%</span>
+        </div>
+        {% if sp %}
+        <svg class="spark" viewBox="0 0 {{ sp.w }} {{ sp.h }}" preserveAspectRatio="none" role="img" aria-label="Tendência das últimas {{ c.serie|length }} coletas">
+          <line class="grid" x1="0" y1="{{ sp.h - 3 }}" x2="{{ sp.w }}" y2="{{ sp.h - 3 }}"></line>
+          <polygon class="area" points="{{ sp.area }}"></polygon>
+          <polyline class="line" points="{{ sp.linha }}"></polyline>
+        </svg>
+        {% endif %}
+        <div class="foot">
+          <span>máx <b>{{ c.Maxima }}</b></span>
+          <span>mín <b>{{ c.Minima }}</b></span>
+          {% if c.spread is defined %}<span>spread <b>{{ "%.4f"|format(c.spread) if not grande else "{:,.0f}".format(c.spread).replace(',', '.') }}</b></span>{% endif %}
+          {% if sp %}<span class="spark-note">{{ c.serie|length }} coletas</span>{% endif %}
+        </div>
+      </article>
+      {% else %}
+      <p class="empty">Nenhuma cotação ainda — sincronize para coletar.</p>
       {% endfor %}
-      <div class="kpi">
-        <span class="eyebrow">Pares monitorados</span>
-        <span class="value">{{ cotacoes|length }}</span>
-        <span class="delta">{{ cotacoes|map(attribute='Par')|join(' · ') }}</span>
-      </div>
-      <div class="kpi">
-        <span class="eyebrow">Cidades</span>
-        <span class="value">{{ clima|length }}</span>
-        <span class="delta">{{ clima|map(attribute='Cidade')|join(' · ') }}</span>
-      </div>
-      <div class="kpi">
-        <span class="eyebrow">Registros lidos</span>
-        <span class="value">{{ kpis.coletas }}</span>
-        <span class="delta">cotações + clima no Airtable</span>
-      </div>
     </div>
   </section>
 
-  <div class="cols">
-
-    <!-- Câmbio -->
-    <section aria-labelledby="h-cambio">
-      <div class="section-head">
-        <h2 id="h-cambio">Câmbio</h2>
-        <span class="hint">última cotação por par · fonte AwesomeAPI</span>
-      </div>
-      <div class="panel">
-        {% for c in cotacoes %}
-        {% set v = c.Variacao or 0 %}
-        {% set sp = c.serie|sparkline %}
-        <div class="quote">
-          <div>
-            <div class="pair">{{ c.Par }}</div>
-            <div class="name">{{ c.Nome }}</div>
-          </div>
-          <div class="spark-cell">
-            {% if sp %}
-            <svg class="spark" viewBox="0 0 {{ sp.w }} {{ sp.h }}" role="img" aria-label="Tendência das últimas coletas">
-              <line class="grid" x1="0" y1="{{ sp.h - 3 }}" x2="{{ sp.w }}" y2="{{ sp.h - 3 }}"></line>
-              <polygon class="area" points="{{ sp.area }}"></polygon>
-              <polyline class="line" points="{{ sp.linha }}"></polyline>
-              <circle class="end" cx="{{ '%.1f'|format(sp.fim[0]) }}" cy="{{ '%.1f'|format(sp.fim[1]) }}" r="2.4"></circle>
-            </svg>
-            <span>{{ c.serie|length }} coletas</span>
-            {% else %}<span>histórico curto</span>{% endif %}
-          </div>
-          <span class="chg {{ 'up' if v > 0 else ('down' if v < 0 else 'flat') }}">{{ '▲' if v > 0 else ('▼' if v < 0 else '•') }} {{ "%+.2f"|format(v) }}%</span>
-          <div>
-            <div class="price"><small>R$</small>{{ "%.4f"|format(c.Compra or 0) if (c.Compra or 0) < 1000 else "{:,.0f}".format(c.Compra or 0).replace(',', '.') }}</div>
-            <div class="range">máx {{ c.Maxima }} · mín {{ c.Minima }}</div>
-          </div>
+  <!-- Clima -->
+  <section aria-labelledby="h-clima">
+    <div class="head">
+      <h2 id="h-clima">Clima agora</h2>
+      <span class="hint">Open-Meteo · códigos WMO</span>
+      <span class="right">alerta se T ≥ {{ limites.temp_max|int }}°C, T ≤ {{ limites.temp_min|int }}°C ou chuva ≥ {{ limites.chuva|int }} mm</span>
+    </div>
+    <div class="tiles">
+      {% for c in clima %}
+      {% set t = c.Temperatura or 0 %}
+      {% set cls = 'hot' if t >= limites.temp_max else ('cold' if t <= limites.temp_min else ('rain' if (c.Chuva or 0) >= limites.chuva else '')) %}
+      <article class="wx {{ cls }}">
+        <div class="top">
+          <div class="city">{{ c.Cidade }}</div>
+          <span class="wmo" title="Código WMO da condição">{{ c.Condicao }}</span>
         </div>
-        {% else %}
-        <p class="empty">Nenhuma cotação ainda — sincronize para coletar.</p>
-        {% endfor %}
-      </div>
-    </section>
-
-    <!-- Clima -->
-    <section aria-labelledby="h-clima">
-      <div class="section-head">
-        <h2 id="h-clima">Clima agora</h2>
-        <span class="hint">fonte Open-Meteo</span>
-      </div>
-      <div class="weather">
-        {% for c in clima %}
-        {% set t = c.Temperatura or 0 %}
-        {% set cls = 'hot' if t >= limites.temp_max else ('cold' if t <= limites.temp_min else ('rain' if (c.Chuva or 0) >= limites.chuva else '')) %}
-        <div class="wx {{ cls }}">
-          <div class="temp">{{ "%.1f"|format(t) }}<small>°C</small></div>
-          <div>
-            <div class="city">{{ c.Cidade }}</div>
-            <div class="cond">{{ c.Condicao }} · sensação {{ c.SensacaoTermica }}°C</div>
-          </div>
-          <div class="stats">
-            <span>umidade<b>{{ c.Umidade }}%</b></span>
-            <span>vento<b>{{ c.Vento }} km/h</b></span>
-            <span>chuva<b>{{ c.Chuva }} mm</b></span>
-          </div>
+        <div class="temp">{{ "%.1f"|format(t) }}<small>°C</small></div>
+        <div class="cond">sensação térmica {{ c.SensacaoTermica }}°C</div>
+        <div class="stats">
+          <span>umidade<b>{{ c.Umidade }}%</b></span>
+          <span>vento<b>{{ c.Vento }} km/h</b></span>
+          <span>chuva<b>{{ c.Chuva }} mm</b></span>
+          <span>coleta<b>{{ (c.ColetadoEm|data_br)[-5:] }}</b></span>
         </div>
-        {% else %}
-        <div class="panel"><p class="empty">Nenhum dado climático ainda.</p></div>
-        {% endfor %}
-      </div>
-    </section>
-  </div>
+      </article>
+      {% else %}
+      <p class="empty">Nenhum dado climático ainda.</p>
+      {% endfor %}
+    </div>
+  </section>
 
   <!-- Alertas -->
   <section aria-labelledby="h-alertas">
-    <div class="section-head">
+    <div class="head">
       <h2 id="h-alertas">Alertas da automação</h2>
       <div class="rules" aria-label="Regras ativas">
         <span class="rule">USD &gt; {{ "%.2f"|format(limites.dolar) }}</span>
@@ -164,39 +136,50 @@
         <span class="rule">T ≤ {{ limites.temp_min|int }}°C</span>
         <span class="rule">chuva ≥ {{ limites.chuva|int }} mm</span>
       </div>
-      <span class="right">{{ kpis.abertos }} aberto{{ 's' if kpis.abertos != 1 }} de {{ alertas|length }}</span>
+      <span class="right">{{ kpis.total_alertas }} no total</span>
     </div>
+
     <div class="alerts">
-      {% for a in alertas %}
-      <div class="alert {{ a.Severidade }} {{ 'resolvido' if a.Resolvido }}">
+      {% for a in abertos %}
+      <div class="alert {{ a.Severidade }}">
         <span class="sev {{ a.Severidade }}">{{ a.Severidade }}</span>
         <div>
-          <div class="title">{{ a.Titulo }}</div>
+          <div class="title">{{ a.Titulo }}{% if a.ocorrencias > 1 %}<span class="count">×{{ a.ocorrencias }} ocorrências</span>{% endif %}</div>
           <div class="msg">{{ a.Mensagem }}</div>
-          <div class="meta">
-            <span>{{ a.CriadoEm|data_br }}</span>
-            <span>{{ a.Tipo }}</span>
-            <span>valor {{ a.Valor }} · limite {{ a.Limite }}</span>
-          </div>
+          <div class="meta"><span>{{ a.CriadoEm|data_br }}</span><span>{{ a.Tipo }}</span><span>valor {{ a.Valor }} · limite {{ "%.2f"|format(a.Limite or 0) }}</span></div>
         </div>
-        {% if a.Resolvido %}
-          <span class="done">✓ resolvido</span>
-        {% elif not demo %}
-          <form method="post" action="{{ url_for('resolver_alerta', record_id=a.id) }}" class="act">
+        {% if not demo %}
+        <form method="post" action="{{ url_for('resolver_alerta', record_id=a.id) }}" class="act">
+          <div class="keygroup">
             <input type="password" name="api_key" placeholder="chave" aria-label="Chave da API" required>
             <button type="submit" class="btn btn-ghost btn-sm">Resolver</button>
-          </form>
+          </div>
+        </form>
         {% endif %}
       </div>
       {% else %}
-      <div class="panel"><p class="empty">Nenhum alerta gerado — todos os indicadores dentro dos limites.</p></div>
+      <p class="empty">Nenhum alerta aberto — todos os indicadores dentro dos limites.</p>
       {% endfor %}
+
+      {% if resolvidos %}
+      <div class="subhead">Resolvidos recentemente</div>
+      {% for a in resolvidos %}
+      <div class="alert {{ a.Severidade }} resolvido">
+        <span class="sev {{ a.Severidade }}">{{ a.Severidade }}</span>
+        <div>
+          <div class="title">{{ a.Titulo }}</div>
+          <div class="meta"><span>{{ a.CriadoEm|data_br }}</span><span>{{ a.Tipo }}</span><span>valor {{ a.Valor }} · limite {{ "%.2f"|format(a.Limite or 0) }}</span></div>
+        </div>
+        <span class="done">✓ resolvido</span>
+      </div>
+      {% endfor %}
+      {% endif %}
     </div>
   </section>
 
   <!-- Histórico -->
   <section aria-labelledby="h-hist">
-    <div class="section-head">
+    <div class="head">
       <h2 id="h-hist">Histórico de coletas</h2>
       <span class="hint">últimas {{ historico|length }} cotações gravadas no Airtable</span>
     </div>
@@ -207,12 +190,13 @@
         </thead>
         <tbody>
           {% for c in historico %}
+          {% set v = c.Variacao or 0 %}
           <tr>
             <td class="num">{{ c.ColetadoEm|data_br }}</td>
             <td><strong>{{ c.Par }}</strong></td>
             <td class="num r">{{ c.Compra }}</td>
             <td class="num r">{{ c.Venda }}</td>
-            <td class="num r" style="color: var(--{{ 'ok' if (c.Variacao or 0) > 0 else ('crit' if (c.Variacao or 0) < 0 else 'muted') }})">{{ "%+.2f"|format(c.Variacao or 0) }}%</td>
+            <td class="num r {{ 'up' if v > 0 else ('down' if v < 0 else '') }}">{{ "%+.2f"|format(v) }}%</td>
             <td class="num r">{{ c.Maxima }}</td>
             <td class="num r">{{ c.Minima }}</td>
             <td>{{ c.Fonte }}</td>
@@ -227,7 +211,7 @@
 
 </main>
 
-<footer>
+<footer class="wrap">
   <span>API própria: <code>GET /api/cotacoes</code> <code>GET /api/clima</code> <code>GET /api/alertas</code> <code>GET /api/ao-vivo</code> <code>POST /api/sincronizar</code> (header <code>X-API-Key</code>)</span>
   <span class="grow"></span>
   <span>UniFECAF · Integração e API</span>
@@ -238,8 +222,7 @@
     var btn = document.getElementById("tema"), root = document.documentElement;
     btn.addEventListener("click", function () {
       var atual = root.getAttribute("data-theme");
-      var sistemaEscuro = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      var escuro = atual ? atual === "dark" : sistemaEscuro;
+      var escuro = atual ? atual === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
       var novo = escuro ? "light" : "dark";
       root.setAttribute("data-theme", novo);
       try { localStorage.setItem("tema", novo); } catch (e) {}

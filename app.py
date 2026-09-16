@@ -99,11 +99,14 @@ def sincronizar() -> dict:
                 } for c in lista_clima_ok])
                 resumo["clima"] = len(lista_clima_ok)
 
-            # 4: automação — regras geram alertas
+            # 4: automação — regras geram alertas (sem duplicar um alerta ainda aberto)
             alertas = automacao.avaliar_cotacoes(lista_cotacoes) + automacao.avaliar_clima(lista_clima_ok)
-            if alertas:
-                airtable.criar_registros("Alertas", alertas)
-            resumo["alertas"] = len(alertas)
+            abertos = {a.get("Titulo") for a in airtable.listar_registros("Alertas", 100, filtro="NOT({Resolvido})")}
+            novos = [a for a in alertas if a["Titulo"] not in abertos]
+            if novos:
+                airtable.criar_registros("Alertas", novos)
+            resumo["alertas"] = len(novos)
+            resumo["alertas_ja_abertos"] = len(alertas) - len(novos)
         except requests.HTTPError as e:
             resumo["erros"].append(f"Airtable: {e.response.status_code} {e.response.text[:200]}")
     else:
@@ -146,23 +149,49 @@ def montar_contexto(dados: dict) -> dict:
     for c in dados["clima"]:
         ultimo_clima.setdefault(c.get("Cidade"), c)
 
-    alertas = dados["alertas"]
-    abertos = [a for a in alertas if not a.get("Resolvido")]
+    # Alertas: abertos agrupados por título (com contagem de ocorrências), depois os resolvidos
+    abertos, resolvidos = {}, []
+    for a in dados["alertas"]:
+        if a.get("Resolvido"):
+            resolvidos.append(a)
+        elif a.get("Titulo") in abertos:
+            abertos[a["Titulo"]]["ocorrencias"] += 1
+        else:
+            abertos[a["Titulo"]] = {**a, "ocorrencias": 1}
+    peso = {"Critico": 0, "Atencao": 1, "Info": 2}
+    lista_abertos = sorted(abertos.values(), key=lambda a: peso.get(a.get("Severidade"), 9))
+    criticos = sum(1 for a in lista_abertos if a.get("Severidade") == "Critico")
+
+    # Frase de estado: a leitura mais importante da página, em palavras
+    if dados["erro"]:
+        estado = {"nivel": "crit", "texto": "Falha ao ler o banco de dados", "detalhe": dados["erro"]}
+    elif not lista_abertos:
+        estado = {"nivel": "ok", "texto": "Todos os indicadores dentro dos limites", "detalhe": ""}
+    else:
+        n = len(lista_abertos)
+        estado = {
+            "nivel": "crit" if criticos else "warn",
+            "texto": f"{n} alerta{'s' if n != 1 else ''} aberto{'s' if n != 1 else ''}"
+                     + (f", {criticos} crítico{'s' if criticos != 1 else ''}" if criticos else ""),
+            "detalhe": " · ".join(a["Titulo"] for a in lista_abertos[:3]),
+        }
+
     ultima_coleta = dados["cotacoes"][0].get("ColetadoEm") if dados["cotacoes"] else None
+    for c in ultimas.values():
+        if c.get("Compra") and c.get("Venda"):
+            c["spread"] = c["Venda"] - c["Compra"]
 
     ordem = {par: i for i, par in enumerate(config.MOEDAS)}
     return {
         "cotacoes": sorted(ultimas.values(), key=lambda c: ordem.get(c.get("Par"), 99)),
         "clima": list(ultimo_clima.values()),
-        "alertas": alertas,
+        "abertos": lista_abertos,
+        "resolvidos": resolvidos[:6],
+        "estado": estado,
         "historico": dados["cotacoes"][:12],
         "erro": dados["erro"],
-        "kpis": {
-            "abertos": len(abertos),
-            "criticos": sum(1 for a in abertos if a.get("Severidade") == "Critico"),
-            "coletas": len(dados["cotacoes"]) + len(dados["clima"]),
-            "ultima": ultima_coleta,
-        },
+        "kpis": {"abertos": len(lista_abertos), "criticos": criticos, "ultima": ultima_coleta,
+                 "total_alertas": len(dados["alertas"])},
         "fontes": [
             {"nome": "AwesomeAPI", "ok": bool(dados["cotacoes"])},
             {"nome": "Open-Meteo", "ok": bool(dados["clima"])},
