@@ -4,7 +4,7 @@ Prints que comprovam o sistema funcionando.
 
 ## Dashboard (interface da Central)
 
-Cotações e clima consolidados, alerta gerado pela automação (dólar acima do limite) e histórico de coletas.
+KPIs, câmbio com sparkline do histórico, clima por cidade, feed de alertas com severidade e histórico de coletas. Tema claro/escuro pelo botão ◐. Versão navegável: https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada
 
 ![Dashboard](01-dashboard.png)
 

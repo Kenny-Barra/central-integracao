@@ -34,7 +34,7 @@ Aplicação web em **Python + Flask** que consome **duas APIs públicas** (cota�
 | **Banco No-Code** | Airtable — tabelas `Cotacoes`, `Clima`, `Alertas` |
 | **Autenticação** | Bearer token (Airtable) · `X-API-Key` (rotas de escrita da Central) |
 | **Automações** | 4 regras: dólar acima do limite, variação brusca, temperatura extrema, chuva forte |
-| **Interface** | Dashboard web (cards, alertas, histórico) + API REST própria (`/api/*`) |
+| **Interface** | Dashboard web (KPIs, sparklines, feed de alertas, histórico, tema claro/escuro) + API REST própria (`/api/*`) |
 | **Dados monitorados** | USD-BRL · EUR-BRL · BTC-BRL · clima de São Paulo, Rio de Janeiro e Curitiba |
 
 ---
@@ -42,6 +42,7 @@ Aplicação web em **Python + Flask** que consome **duas APIs públicas** (cota�
 ## 2. Links do projeto
 
 - **Vídeo Pitch (YouTube):** _(inserir link)_
+- **Demonstração do dashboard (artefato, dados reais):** https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada
 - **Repositório:** https://github.com/Kenny-Barra/central-integracao
 - **Base Airtable (visualização):** _(inserir link compartilhado somente leitura)_
 - **Documentação das APIs:** [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas) · [Open-Meteo](https://open-meteo.com/en/docs) · [Airtable Web API](https://airtable.com/developers/web/api/introduction)
@@ -255,7 +256,7 @@ Detalhamento na [Parte Teórica](docs/parte-teorica.md).
 | 2 | **Parte Prática** (aplicação + Airtable + automação) | código neste repositório + [`evidencias/`](evidencias/) |
 | 3 | **Vídeo Pitch** | _(inserir link)_ |
 
-Prints do sistema funcionando em [`evidencias/`](evidencias/):
+Prints do sistema funcionando em [`evidencias/`](evidencias/) — e uma [demonstração navegável do dashboard](https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada) com os dados coletados:
 
 ![Dashboard](evidencias/01-dashboard.png)
 

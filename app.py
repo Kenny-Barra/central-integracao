@@ -34,6 +34,23 @@ def data_br(valor):
         return valor
 
 
+@app.template_filter("sparkline")
+def sparkline(serie, largura=120, altura=36):
+    """Gera os atributos de um sparkline SVG (linha + área) a partir de uma lista de números."""
+    pts = [v for v in (serie or []) if v is not None]
+    if len(pts) < 2:
+        return None
+    lo, hi = min(pts), max(pts)
+    amp = (hi - lo) or 1
+    pad = 3
+    passo = (largura - 2 * pad) / (len(pts) - 1)
+    coords = [(pad + i * passo, altura - pad - (v - lo) / amp * (altura - 2 * pad)) for i, v in enumerate(pts)]
+    linha = " ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
+    area = f"{coords[0][0]:.1f},{altura} " + linha + f" {coords[-1][0]:.1f},{altura}"
+    return {"linha": linha, "area": area, "fim": coords[-1], "w": largura, "h": altura,
+            "delta": pts[-1] - pts[0]}
+
+
 # ---------- Segurança: rotas de escrita exigem chave de API ----------
 def exige_api_key(f):
     @wraps(f)
@@ -110,24 +127,50 @@ def dashboard():
     else:
         dados["erro"] = "Airtable não configurado. Copie .env.example para .env e preencha."
 
-    # Última cotação por par e último clima por cidade (para os cards)
-    ultimas = {}
+    return render_template("dashboard.html", **montar_contexto(dados))
+
+
+def montar_contexto(dados: dict) -> dict:
+    """Agrupa os registros do Airtable no formato que o dashboard exibe."""
+    # Última cotação por par + série histórica (mais antiga → mais recente) para o sparkline
+    ultimas, series = {}, {}
     for c in dados["cotacoes"]:
-        ultimas.setdefault(c.get("Par"), c)
+        par = c.get("Par")
+        ultimas.setdefault(par, c)
+        series.setdefault(par, []).append(c.get("Compra"))
+    for par, serie in series.items():
+        serie.reverse()
+        ultimas[par]["serie"] = [v for v in serie if v is not None][-12:]
+
     ultimo_clima = {}
     for c in dados["clima"]:
         ultimo_clima.setdefault(c.get("Cidade"), c)
 
-    return render_template(
-        "dashboard.html",
-        cotacoes=list(ultimas.values()),
-        clima=list(ultimo_clima.values()),
-        alertas=dados["alertas"],
-        historico=dados["cotacoes"][:10],
-        erro=dados["erro"],
-        limites={"dolar": config.LIMITE_DOLAR, "temp_max": config.LIMITE_TEMP_MAX,
-                 "temp_min": config.LIMITE_TEMP_MIN, "chuva": config.LIMITE_CHUVA_MM},
-    )
+    alertas = dados["alertas"]
+    abertos = [a for a in alertas if not a.get("Resolvido")]
+    ultima_coleta = dados["cotacoes"][0].get("ColetadoEm") if dados["cotacoes"] else None
+
+    ordem = {par: i for i, par in enumerate(config.MOEDAS)}
+    return {
+        "cotacoes": sorted(ultimas.values(), key=lambda c: ordem.get(c.get("Par"), 99)),
+        "clima": list(ultimo_clima.values()),
+        "alertas": alertas,
+        "historico": dados["cotacoes"][:12],
+        "erro": dados["erro"],
+        "kpis": {
+            "abertos": len(abertos),
+            "criticos": sum(1 for a in abertos if a.get("Severidade") == "Critico"),
+            "coletas": len(dados["cotacoes"]) + len(dados["clima"]),
+            "ultima": ultima_coleta,
+        },
+        "fontes": [
+            {"nome": "AwesomeAPI", "ok": bool(dados["cotacoes"])},
+            {"nome": "Open-Meteo", "ok": bool(dados["clima"])},
+            {"nome": "Airtable", "ok": airtable.configurado() and not dados["erro"]},
+        ],
+        "limites": {"dolar": config.LIMITE_DOLAR, "temp_max": config.LIMITE_TEMP_MAX,
+                    "temp_min": config.LIMITE_TEMP_MIN, "chuva": config.LIMITE_CHUVA_MM},
+    }
 
 
 @app.route("/sincronizar", methods=["POST"])
