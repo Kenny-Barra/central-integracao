@@ -2,7 +2,7 @@
 
 **Projeto:** Central Inteligente de Monitoramento: Integrando APIs para Automatizar Processos e Gerar Insights
 **Disciplina:** Integração e API – UNIFECAF, 2º semestre
-**Aluno:** _(seu nome)_
+**Aluno:** Kenedy Pereira
 
 ---
 
@@ -14,8 +14,8 @@ Na prática, isso significa que um colaborador precisa abrir várias telas para 
 
 Para tornar o problema concreto, este projeto adota o cenário de uma **equipe financeira e de operações** que precisa acompanhar diariamente dois fatores externos que afetam diretamente o negócio:
 
-- **Câmbio** — o valor do dólar e do euro impacta compras de insumos importados, precificação e contratos; o bitcoin foi incluído como ativo de alta volatilidade para demonstrar regras de variação.
-- **Clima** — temperatura extrema e chuva forte afetam logística, entregas, consumo de energia e segurança de equipes em campo.
+- **Câmbio:** o valor do dólar e do euro impacta compras de insumos importados, precificação e contratos; o bitcoin foi incluído como ativo de alta volatilidade para demonstrar regras de variação.
+- **Clima:** temperatura extrema e chuva forte afetam logística, entregas, consumo de energia e segurança de equipes em campo.
 
 Hoje essas informações são consultadas em sites diferentes, sem histórico consolidado e sem qualquer aviso automático quando um limite relevante é ultrapassado.
 
@@ -38,7 +38,7 @@ A solução foi construída em Python com Flask por ser uma stack leve, legível
 - **Endpoint:** `GET https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL`
 - **Autenticação:** não exigida no plano público.
 - **Dados obtidos:** compra (`bid`), venda (`ask`), variação percentual (`pctChange`), máxima e mínima do dia.
-- **Justificativa:** é uma API brasileira, gratuita, com alta disponibilidade e documentação clara. Retorna múltiplos pares em uma única chamada, o que reduz o número de requisições. Os dados chegam como *strings*, o que exige tratamento explícito — um bom exemplo didático de manipulação de dados.
+- **Justificativa:** é uma API brasileira, gratuita, com alta disponibilidade e documentação clara. Retorna múltiplos pares em uma única chamada, o que reduz o número de requisições. Os dados chegam como *strings*, o que exige tratamento explícito, um bom exemplo didático de manipulação de dados.
 
 ### 3.2 Open-Meteo – Dados meteorológicos
 
@@ -127,7 +127,7 @@ Melhorias possíveis para produção: autenticação de usuários (OAuth/OIDC), 
 
 ### LGPD
 
-A solução foi desenhada com o princípio da **minimização**: não coleta, armazena nem trafega dados pessoais — apenas indicadores econômicos e meteorológicos públicos. Isso a coloca fora do escopo material da LGPD. Ainda assim, caso o projeto evolua para incluir dados de clientes (ex.: cruzar clima com endereços de entrega), seriam necessários: base legal definida (execução de contrato ou legítimo interesse), registro das operações de tratamento, controle de acesso por perfil, política de retenção e descarte, e canal para exercício de direitos dos titulares.
+A solução foi desenhada com o princípio da **minimização**: não coleta, armazena nem trafega dados pessoais, apenas indicadores econômicos e meteorológicos públicos. Isso a coloca fora do escopo material da LGPD. Ainda assim, caso o projeto evolua para incluir dados de clientes (ex.: cruzar clima com endereços de entrega), seriam necessários: base legal definida (execução de contrato ou legítimo interesse), registro das operações de tratamento, controle de acesso por perfil, política de retenção e descarte, e canal para exercício de direitos dos titulares.
 
 ### Ética
 
@@ -137,12 +137,12 @@ A solução foi desenhada com o princípio da **minimização**: não coleta, ar
 
 ### Governança das integrações
 
-- **Catálogo de integrações:** cada API tem um módulo próprio em `services/`, com URL, autenticação e formato documentados — fácil de auditar e substituir.
+- **Catálogo de integrações:** cada API tem um módulo próprio em `services/`, com URL, autenticação e formato documentados, fácil de auditar e substituir.
 - **Configuração externa:** limites, cidades e moedas ficam no `.env`, permitindo mudar regras sem alterar código.
 - **Observabilidade:** logs estruturados de cada sincronização (quantidades e erros) e resumo retornado pela API.
 - **Controle de mudanças:** versionamento no Git com `.env` fora do repositório.
 - **Ciclo de vida dos dados:** o Airtable permite visualizações, filtros e exclusão em massa; recomenda-se política de retenção (ex.: 90 dias) para o histórico.
-- **Dependência de terceiros:** o risco de descontinuidade das APIs gratuitas é mitigado pela arquitetura em módulos — trocar de provedor exige alterar apenas um arquivo.
+- **Dependência de terceiros:** o risco de descontinuidade das APIs gratuitas é mitigado pela arquitetura em módulos: trocar de provedor exige alterar apenas um arquivo.
 
 ## 8. Conclusão
 

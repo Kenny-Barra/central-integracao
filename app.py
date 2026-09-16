@@ -99,7 +99,7 @@ def sincronizar() -> dict:
                 } for c in lista_clima_ok])
                 resumo["clima"] = len(lista_clima_ok)
 
-            # 4: automação — regras geram alertas (sem duplicar um alerta ainda aberto)
+            # 4: automação: regras geram alertas (sem duplicar um alerta ainda aberto)
             alertas = automacao.avaliar_cotacoes(lista_cotacoes) + automacao.avaliar_clima(lista_clima_ok)
             abertos = {a.get("Titulo") for a in airtable.listar_registros("Alertas", 100, filtro="NOT({Resolvido})")}
             novos = [a for a in alertas if a["Titulo"] not in abertos]

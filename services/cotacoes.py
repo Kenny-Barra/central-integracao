@@ -1,4 +1,4 @@
-"""Integração com a AwesomeAPI (cotações de moedas) — API pública, sem autenticação."""
+"""Integração com a AwesomeAPI (cotações de moedas). API pública, sem autenticação."""
 from datetime import datetime, timezone
 import requests
 

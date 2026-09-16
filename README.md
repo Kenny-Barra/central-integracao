@@ -1,8 +1,8 @@
-# Central Inteligente de Monitoramento — Integração de APIs
+# Central de Monitoramento (Integração de APIs)
 
-Aplicação web em **Python + Flask** que consome **duas APIs públicas** (cotações de moedas e clima), trata e normaliza os dados, persiste tudo em um **banco No-Code (Airtable)** e executa **regras de automação** que geram alertas quando limites configuráveis são ultrapassados — tudo em um único painel.
+Aplicação web em Python + Flask que consome duas APIs públicas (cotações de moedas e clima), trata os dados, grava tudo no Airtable e gera alertas automáticos quando um limite é ultrapassado. Tudo fica em um único painel.
 
-> Trabalho da disciplina **"Integração e API"** — UniFECAF, 2º semestre.
+> Trabalho da disciplina **Integração e API**, UniFECAF, 2º semestre.
 
 ---
 
@@ -11,13 +11,13 @@ Aplicação web em **Python + Flask** que consome **duas APIs públicas** (cota�
 1. [Visão geral](#1-visão-geral)
 2. [Links do projeto](#2-links-do-projeto)
 3. [O problema e a solução](#3-o-problema-e-a-solução)
-4. [APIs utilizadas e por quê](#4-apis-utilizadas-e-por-quê)
-5. [Arquitetura e fluxo de integração](#5-arquitetura-e-fluxo-de-integração)
+4. [APIs utilizadas](#4-apis-utilizadas)
+5. [Fluxo de integração](#5-fluxo-de-integração)
 6. [Tratamento dos dados](#6-tratamento-dos-dados)
-7. [Modelo de dados (Airtable)](#7-modelo-de-dados-airtable)
+7. [Banco de dados (Airtable)](#7-banco-de-dados-airtable)
 8. [Automações](#8-automações)
 9. [Autenticação e segurança](#9-autenticação-e-segurança)
-10. [Interface e API própria](#10-interface-e-api-própria)
+10. [Dashboard e API própria](#10-dashboard-e-api-própria)
 11. [Como executar](#11-como-executar)
 12. [LGPD, ética e governança](#12-lgpd-ética-e-governança)
 13. [Entregáveis e evidências](#13-entregáveis-e-evidências)
@@ -29,52 +29,54 @@ Aplicação web em **Python + Flask** que consome **duas APIs públicas** (cota�
 
 | | |
 |---|---|
-| **Stack** | Python 3.12 · Flask · Requests · Airtable REST API |
-| **APIs externas** | AwesomeAPI (câmbio) · Open-Meteo (clima) |
-| **Banco No-Code** | Airtable — tabelas `Cotacoes`, `Clima`, `Alertas` |
-| **Autenticação** | Bearer token (Airtable) · `X-API-Key` (rotas de escrita da Central) |
-| **Automações** | 4 regras: dólar acima do limite, variação brusca, temperatura extrema, chuva forte |
-| **Interface** | Dashboard web: linha de estado em palavras, tiles de câmbio com sparkline e spread, clima com símbolo WMO, régua de temperatura com os limites de alerta e tendência, alertas agrupados por severidade, histórico, tema claro/escuro + API REST própria (`/api/*`) |
-| **Dados monitorados** | USD-BRL · EUR-BRL · BTC-BRL · clima de São Paulo, Rio de Janeiro e Curitiba |
+| **Stack** | Python 3.12, Flask, Requests |
+| **APIs externas** | AwesomeAPI (câmbio) e Open-Meteo (clima) |
+| **Banco No-Code** | Airtable, tabelas `Cotacoes`, `Clima` e `Alertas` |
+| **Autenticação** | Token Bearer no Airtable; chave `X-API-Key` nas rotas de escrita da aplicação |
+| **Automações** | 4 regras: dólar acima do limite, variação brusca, temperatura extrema e chuva forte |
+| **Interface** | Dashboard com linha de estado, cotações com tendência, clima com régua de limites, alertas e histórico. Tema claro e escuro |
+| **Monitorado** | USD-BRL, EUR-BRL, BTC-BRL e o clima de São Paulo, Rio de Janeiro e Curitiba |
+
+![Dashboard](evidencias/01-dashboard.png)
 
 ---
 
 ## 2. Links do projeto
 
 - **Vídeo Pitch (YouTube):** _(inserir link)_
-- **Demonstração do dashboard (artefato, dados reais):** https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada
-- **Repositório:** https://github.com/Kenny-Barra/central-integracao
-- **Base Airtable (visualização):** _(inserir link compartilhado somente leitura)_
-- **Documentação das APIs:** [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas) · [Open-Meteo](https://open-meteo.com/en/docs) · [Airtable Web API](https://airtable.com/developers/web/api/introduction)
+- **Demonstração do dashboard (com os dados coletados):** https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada
+- **Base no Airtable (somente leitura):** _(inserir link)_
+- **Documentação das APIs:** [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas), [Open-Meteo](https://open-meteo.com/en/docs), [Airtable Web API](https://airtable.com/developers/web/api/introduction)
 
 ---
 
 ## 3. O problema e a solução
 
-**Antes.** Uma equipe financeira/operacional precisa acompanhar o **câmbio** (compras importadas, precificação) e o **clima** (logística, entregas, equipes em campo). Essas informações vivem em sites diferentes, sem histórico consolidado e sem nenhum aviso automático quando algo sai do normal — o colaborador abre várias telas, copia números na mão e decide com dado desatualizado.
+**Antes.** Uma equipe financeira ou de operações precisa acompanhar o câmbio (compras importadas, precificação) e o clima (logística, entregas, equipe em campo). Essas informações ficam em sites diferentes, sem histórico e sem nenhum aviso quando algo sai do normal. A pessoa abre várias abas, anota números na mão e decide com dado velho.
 
-**Depois.** A Central:
-- **consome** as duas APIs em uma única sincronização;
-- **trata** os dados (strings → números, código WMO → texto, carimbo de data e fonte);
-- **persiste** tudo no Airtable, criando histórico;
-- **automatiza**: regras avaliam os dados e geram alertas classificados por severidade;
-- **apresenta** em um dashboard e **expõe** uma API própria para outros sistemas.
+**Depois.** A Central faz o ciclo completo em uma sincronização:
+
+1. consome as duas APIs;
+2. trata os dados (texto vira número, código WMO vira descrição, cada registro recebe data e fonte);
+3. grava no Airtable, formando histórico;
+4. aplica as regras de automação e cria alertas por severidade;
+5. mostra tudo no dashboard e expõe uma API própria para outros sistemas.
 
 ---
 
-## 4. APIs utilizadas e por quê
+## 4. APIs utilizadas
 
-| API | Uso | Auth | Justificativa |
+| API | O que fornece | Auth | Por que foi escolhida |
 |---|---|---|---|
-| **AwesomeAPI – Economia** | `GET /last/USD-BRL,EUR-BRL,BTC-BRL` — compra, venda, variação, máx/mín | Não exige | Brasileira, gratuita, estável; retorna vários pares em uma chamada; dados chegam como *string* (bom caso de tratamento) |
-| **Open-Meteo** | `GET /v1/forecast?latitude&longitude&current=...` — temperatura, sensação, umidade, vento, chuva, código WMO | Não exige | Sem cadastro, JSON compacto, escolha exata das variáveis; código WMO numérico precisa ser traduzido |
-| **Airtable REST API** | `POST/GET/PATCH /v0/{base}/{tabela}` | **Bearer PAT** | Exigido pelo trabalho; interface visual gratuita, automações nativas, limites claros (10 registros/req) |
+| **AwesomeAPI (Economia)** | `GET /last/USD-BRL,EUR-BRL,BTC-BRL`: compra, venda, variação do dia, máxima e mínima | Não exige | Brasileira, gratuita e estável. Retorna vários pares em uma chamada. Os valores chegam como texto, o que obriga a tratar os dados |
+| **Open-Meteo** | `GET /v1/forecast?latitude&longitude&current=...`: temperatura, sensação, umidade, vento, chuva e código WMO da condição | Não exige | Sem cadastro, JSON enxuto e escolha exata das variáveis. O código numérico precisa ser traduzido |
+| **Airtable REST API** | `POST/GET/PATCH /v0/{base}/{tabela}` | Token Bearer | Exigido pelo trabalho. Tem interface visual, automações nativas e limites claros (10 registros por requisição) |
 
-As duas APIs são de **domínios totalmente diferentes** (financeiro e ambiental) — o que evidencia o valor de centralizar dados que jamais estariam no mesmo sistema.
+As duas fontes são de áreas totalmente diferentes (financeira e ambiental). É isso que mostra o valor de centralizar: dados que nunca estariam no mesmo sistema passam a ter o mesmo formato, o mesmo histórico e as mesmas regras.
 
 ---
 
-## 5. Arquitetura e fluxo de integração
+## 5. Fluxo de integração
 
 ```
 ┌─────────────┐   GET /last/USD-BRL,...        ┌──────────────────────┐
@@ -82,8 +84,8 @@ As duas APIs são de **domínios totalmente diferentes** (financeiro e ambiental
 └─────────────┘                                │   Flask (app.py)     │   POST /v0/{base}/Cotacoes
 ┌─────────────┐   GET /v1/forecast?...         │                      │ ─────────────────────────▶ ┌──────────┐
 │ Open-Meteo  │ ─────────────────────────────▶ │  services/cotacoes   │   POST /v0/{base}/Clima    │ Airtable │
-└─────────────┘                                │  services/clima      │ ─────────────────────────▶ │ (No-Code │
-                                               │  services/automacao  │   POST /v0/{base}/Alertas  │   DB)    │
+└─────────────┘                                │  services/clima      │ ─────────────────────────▶ │          │
+                                               │  services/automacao  │   POST /v0/{base}/Alertas  │          │
                                                │  services/airtable   │ ─────────────────────────▶ └────┬─────┘
                                                └──────────┬───────────┘                                 │
                                                           │            GET /v0/{base}/...               │
@@ -94,109 +96,110 @@ As duas APIs são de **domínios totalmente diferentes** (financeiro e ambiental
                                                └──────────────────────┘
 ```
 
-**Uma sincronização** (`POST /sincronizar` pelo botão ou `POST /api/sincronizar` por outro sistema/agendador):
+Uma sincronização é disparada pelo botão do dashboard (`POST /sincronizar`) ou por outro sistema (`POST /api/sincronizar`), o que permite agendar via cron ou GitHub Actions:
 
 1. `services/cotacoes.py` chama a AwesomeAPI e normaliza a resposta.
-2. `services/clima.py` chama a Open-Meteo para cada cidade — erro em uma cidade **não derruba** as demais.
-3. `services/airtable.py` grava `Cotacoes` e `Clima` em lotes de 10 (limite da API).
-4. `services/automacao.py` aplica as regras e devolve a lista de alertas, gravada em `Alertas`.
-5. A função retorna um resumo `{cotacoes, clima, alertas, erros}` e registra no log.
-6. O dashboard lê o Airtable e exibe o último valor por par/cidade, alertas e histórico.
+2. `services/clima.py` chama a Open-Meteo para cada cidade. Se uma cidade falhar, as outras continuam.
+3. `services/airtable.py` grava `Cotacoes` e `Clima` em lotes de 10.
+4. `services/automacao.py` avalia as regras. Alertas novos vão para `Alertas`; se já existe um aberto com o mesmo título, não duplica.
+5. A função devolve um resumo `{cotacoes, clima, alertas, erros}` e registra no log.
 
-Decisões de projeto: **histórico** (cada sincronização gera novos registros, nunca sobrescreve), **tolerância a falhas** (cada fonte em `try/except`), **timeouts** de 10–15 s em toda chamada externa, **módulo por API** (trocar de provedor = alterar um arquivo).
+Decisões que valem destacar: cada sincronização gera registros novos (nunca sobrescreve), toda chamada externa tem timeout, e cada API tem seu próprio módulo, então trocar de provedor é mexer em um arquivo só.
 
 ---
 
 ## 6. Tratamento dos dados
 
-| Origem | Como chega | Tratamento aplicado |
+| Origem | Como chega | O que é feito |
 |---|---|---|
-| AwesomeAPI | `"bid": "5.1529"` (string) | `float()` com tolerância a valor ausente; chave `USDBRL` → `USD-BRL` |
-| Open-Meteo | `"weather_code": 61` | tabela WMO → `"Chuva leve"` (pt-BR) e grupo de símbolo (sol, nuvem, garoa, chuva, neve, tempestade, neblina) |
-| Ambas | campos com nomes diferentes | padronização: `coletado_em` (UTC ISO 8601) e `fonte` em todo registro |
-| Airtable | limite de 10 registros/req | gravação em lotes; `typecast: true` para selects |
-| Dashboard | ISO em UTC | filtro Jinja `data_br` → `dd/mm/aaaa HH:MM` no fuso de Brasília |
+| AwesomeAPI | `"bid": "5.1529"` (texto) | conversão para `float` com tolerância a valor ausente; chave `USDBRL` vira `USD-BRL` |
+| Open-Meteo | `"weather_code": 61` | tabela WMO traduz para `"Chuva leve"` e define o símbolo do painel |
+| Ambas | nomes de campo diferentes | padronização com `coletado_em` (UTC, ISO 8601) e `fonte` em todo registro |
+| Airtable | limite de 10 registros por requisição | gravação em lotes; `typecast` para os campos de seleção |
+| Dashboard | datas em UTC | filtro `data_br` mostra `dd/mm/aaaa HH:MM` no horário de Brasília |
 
 ---
 
-## 7. Modelo de dados (Airtable)
+## 7. Banco de dados (Airtable)
 
-Base **Central de Monitoramento** com três tabelas independentes (séries temporais + saída da automação):
+Base **Central de Monitoramento**, três tabelas:
 
-**Cotacoes** — histórico de câmbio
-
-| Campo | Tipo |
-|---|---|
-| Par *(primário)* | Single line text (`USD-BRL`) |
-| Nome | Single line text |
-| Compra · Venda · Maxima · Minima | Number (4 casas) |
-| Variacao | Number (2 casas, %) |
-| ColetadoEm | Date/time (fuso São Paulo) |
-| Fonte | Single line text (`AwesomeAPI`) |
-
-**Clima** — histórico meteorológico
+**Cotacoes**
 
 | Campo | Tipo |
 |---|---|
-| Cidade *(primário)* | Single line text |
-| Temperatura · SensacaoTermica · Vento · Chuva | Number (1 casa) |
-| Umidade | Number (inteiro, %) |
-| Condicao | Single line text (descrição WMO em pt-BR) |
-| ColetadoEm | Date/time |
-| Fonte | Single line text (`Open-Meteo`) |
+| Par (primário) | Texto (`USD-BRL`) |
+| Nome | Texto |
+| Compra, Venda, Maxima, Minima | Número, 4 casas |
+| Variacao | Número, 2 casas (%) |
+| ColetadoEm | Data e hora |
+| Fonte | Texto (`AwesomeAPI`) |
 
-**Alertas** — gerados pela automação
+**Clima**
 
 | Campo | Tipo |
 |---|---|
-| Titulo *(primário)* | Single line text |
-| Tipo | Single select (Cotacao · Clima) |
-| Severidade | Single select (Info · Atencao · Critico) |
-| Mensagem | Long text |
-| Valor · Limite | Number |
+| Cidade (primário) | Texto |
+| Temperatura, SensacaoTermica, Vento, Chuva | Número, 1 casa |
+| Umidade | Número inteiro (%) |
+| Condicao | Texto (descrição WMO em português) |
+| ColetadoEm | Data e hora |
+| Fonte | Texto (`Open-Meteo`) |
+
+**Alertas**
+
+| Campo | Tipo |
+|---|---|
+| Titulo (primário) | Texto |
+| Tipo | Seleção única (Cotacao, Clima) |
+| Severidade | Seleção única (Info, Atencao, Critico) |
+| Mensagem | Texto longo |
+| Valor, Limite | Número |
 | Resolvido | Checkbox |
-| CriadoEm | Date/time |
+| CriadoEm | Data e hora |
 
 ---
 
 ## 8. Automações
 
-Executadas após cada sincronização (`services/automacao.py`); limiares vêm do `.env`.
+Rodam depois de cada sincronização (`services/automacao.py`). Os limites vêm do `.env`.
 
 | Regra | Condição | Severidade |
 |---|---|---|
-| **Dólar alto** | `USD-BRL.compra > LIMITE_DOLAR` | Atenção |
-| **Variação brusca** | `abs(variacao) >= 3 %` (≥ 5 % → Crítico) | Atenção / Crítico |
-| **Temperatura extrema** | `temp >= LIMITE_TEMP_MAX` ou `temp <= LIMITE_TEMP_MIN` | Crítico / Atenção |
-| **Chuva forte** | `chuva >= LIMITE_CHUVA_MM` | Atenção |
+| Dólar alto | `USD-BRL.compra > LIMITE_DOLAR` | Atenção |
+| Variação brusca | `abs(variacao) >= 3 %` (a partir de 5 % vira Crítico) | Atenção ou Crítico |
+| Temperatura extrema | `temp >= LIMITE_TEMP_MAX` ou `temp <= LIMITE_TEMP_MIN` | Crítico ou Atenção |
+| Chuva forte | `chuva >= LIMITE_CHUVA_MM` | Atenção |
 
-A automação é **idempotente**: não cria um novo alerta enquanto houver um aberto com o mesmo título (evita ruído a cada sincronização). Os alertas podem ser **resolvidos pelo dashboard** (grava `Resolvido = true` no Airtable). Como ficam na base, é possível ligar automações nativas do Airtable (e-mail, Slack) sem alterar código.
+Um alerta não é recriado enquanto houver outro aberto com o mesmo título, para não encher a tabela a cada sincronização. Pelo dashboard dá para marcar o alerta como resolvido (grava `Resolvido = true`). Como os alertas ficam no Airtable, também é possível ligar automações nativas da plataforma (e-mail, Slack) sem mexer no código.
 
 ---
 
 ## 9. Autenticação e segurança
 
-| Camada | Mecanismo |
+| Onde | Como |
 |---|---|
-| **Airtable** | *Personal Access Token* no header `Authorization: Bearer`, escopos mínimos (`data.records:read/write`), acesso a uma única base |
-| **Central – escrita** | Decorator `exige_api_key`: rotas `POST /sincronizar`, `/api/sincronizar` e `/alertas/<id>/resolver` exigem `X-API-Key` (ou campo `api_key`); sem ele → **HTTP 401** |
-| **Central – leitura** | Pública, pois não há dado pessoal (bastaria aplicar o mesmo decorator em cenário corporativo) |
-| **Segredos** | Só no `.env` (ignorado pelo git); o repositório publica `.env.example` |
-| **Transporte** | HTTPS em todas as APIs externas |
-| **Entrada** | Cidades e moedas vêm de configuração, não de input do usuário — sem injeção nas URLs |
+| Airtable | Token pessoal no header `Authorization: Bearer`, com os escopos mínimos e acesso a uma única base |
+| Rotas de escrita | `POST /sincronizar`, `POST /api/sincronizar` e `POST /alertas/<id>/resolver` exigem `X-API-Key` (ou o campo `api_key`). Sem a chave a resposta é 401 |
+| Rotas de leitura | Públicas, porque não há dado pessoal. Em uso corporativo bastaria aplicar o mesmo decorator |
+| Segredos | Só no `.env`, que está no `.gitignore`. O repositório traz o `.env.example` |
+| Transporte | HTTPS em todas as chamadas externas |
+| Entrada | Cidades e moedas vêm da configuração, não do usuário, então não há como injetar nada nas URLs |
 
 ---
 
-## 10. Interface e API própria
+## 10. Dashboard e API própria
+
+O dashboard abre com uma linha de estado que resume a situação em palavras ("1 alerta aberto: Dólar acima de R$ 5,00"). Abaixo vêm as cotações com variação, tendência das últimas coletas e spread; o clima com o símbolo da condição, uma régua que mostra onde a temperatura está em relação aos limites de alerta e a tendência; os alertas abertos agrupados por severidade; e o histórico de coletas.
 
 | Método | Rota | Auth | Descrição |
 |---|---|---|---|
-| GET | `/` | — | Dashboard |
+| GET | `/` | | Dashboard |
 | POST | `/sincronizar` | `api_key` | Sincroniza e volta ao dashboard |
-| POST | `/alertas/<id>/resolver` | `api_key` | Marca alerta como resolvido |
-| POST | `/api/sincronizar` | `X-API-Key` | Sincroniza e retorna resumo JSON |
-| GET | `/api/cotacoes` · `/api/clima` · `/api/alertas` | — | Dados persistidos no Airtable |
-| GET | `/api/ao-vivo` | — | Consulta direta às APIs externas, sem gravar |
+| POST | `/alertas/<id>/resolver` | `api_key` | Marca o alerta como resolvido |
+| POST | `/api/sincronizar` | `X-API-Key` | Sincroniza e devolve o resumo em JSON |
+| GET | `/api/cotacoes`, `/api/clima`, `/api/alertas` | | Dados gravados no Airtable |
+| GET | `/api/ao-vivo` | | Consulta direta às APIs externas, sem gravar |
 
 ```bash
 curl -X POST http://localhost:5000/api/sincronizar -H "X-API-Key: sua-chave"
@@ -207,7 +210,7 @@ curl -X POST http://localhost:5000/api/sincronizar -H "X-API-Key: sua-chave"
 
 ## 11. Como executar
 
-Pré-requisitos: Python 3.10+ e uma conta gratuita no Airtable.
+Precisa de Python 3.10 ou mais novo e uma conta gratuita no Airtable.
 
 ```bash
 git clone https://github.com/Kenny-Barra/central-integracao.git
@@ -217,34 +220,34 @@ copy .env.example .env        # Linux/macOS: cp .env.example .env
 python app.py
 ```
 
-Abra <http://localhost:5000>, digite a `APP_API_KEY` e clique em **Sincronizar agora**.
+Abra <http://localhost:5000>, digite a `APP_API_KEY` no campo do topo e clique em **Sincronizar**.
 
-**Configurando o Airtable**
+**Airtable**
 
-1. Crie uma base com as três tabelas da [seção 7](#7-modelo-de-dados-airtable) (nomes de campos idênticos).
-2. Gere um token em <https://airtable.com/create/tokens> com escopos `data.records:read` e `data.records:write` e acesso à base.
-3. Preencha no `.env`:
+1. Crie uma base com as três tabelas da [seção 7](#7-banco-de-dados-airtable), com os campos com o mesmo nome.
+2. Gere um token em <https://airtable.com/create/tokens> com os escopos `data.records:read` e `data.records:write` e acesso a essa base.
+3. Preencha o `.env`:
 
-| Variável | Descrição |
+| Variável | Para que serve |
 |---|---|
-| `AIRTABLE_TOKEN` | PAT do Airtable (nunca versionar) |
-| `AIRTABLE_BASE_ID` | ID da base (`app...`) |
-| `APP_API_KEY` | chave exigida nas rotas de escrita da Central |
-| `LIMITE_DOLAR` · `LIMITE_TEMP_MAX` · `LIMITE_TEMP_MIN` · `LIMITE_CHUVA_MM` | limiares das automações |
+| `AIRTABLE_TOKEN` | token do Airtable |
+| `AIRTABLE_BASE_ID` | id da base (`app...`) |
+| `APP_API_KEY` | chave das rotas de escrita |
+| `LIMITE_DOLAR`, `LIMITE_TEMP_MAX`, `LIMITE_TEMP_MIN`, `LIMITE_CHUVA_MM` | limites das automações |
 | `CIDADES` | `nome:lat:lon;...` |
-| `MOEDAS` | pares AwesomeAPI separados por vírgula |
+| `MOEDAS` | pares da AwesomeAPI separados por vírgula |
 
 ---
 
 ## 12. LGPD, ética e governança
 
-- **Minimização:** nenhum dado pessoal é coletado — apenas indicadores públicos — o que coloca o projeto fora do escopo material da LGPD; se evoluir para cruzar com dados de clientes, exigirá base legal, controle de acesso por perfil e política de retenção.
-- **Transparência e rastreabilidade:** cada registro carrega `Fonte` e `ColetadoEm`.
-- **Decisão humana:** os alertas informam; não executam compra/venda nem ação automática irreversível.
-- **Respeito aos provedores:** poucas chamadas por sincronização, timeouts, sem *polling* agressivo.
-- **Governança:** um módulo por integração (auditável e substituível), configuração externa no `.env`, logs por sincronização, `.env` fora do Git.
+- **Minimização:** o sistema não coleta dado pessoal, só indicadores públicos, então fica fora do escopo material da LGPD. Se um dia cruzar com dados de clientes, vai precisar de base legal, controle de acesso por perfil e política de retenção.
+- **Rastreabilidade:** todo registro tem `Fonte` e `ColetadoEm`.
+- **Decisão humana:** os alertas avisam; não compram, não vendem, não fazem nada irreversível.
+- **Respeito aos provedores:** poucas chamadas por sincronização, timeouts e nada de consultar em loop.
+- **Governança:** um módulo por integração, limites e cidades no `.env`, log de cada sincronização e o `.env` fora do Git.
 
-Detalhamento na [Parte Teórica](docs/parte-teorica.md).
+O detalhamento está na [Parte Teórica](docs/parte-teorica.md).
 
 ---
 
@@ -252,13 +255,9 @@ Detalhamento na [Parte Teórica](docs/parte-teorica.md).
 
 | # | Entregável | Onde está |
 |---|---|---|
-| 1 | **Parte Teórica** | [`docs/parte-teorica.md`](docs/parte-teorica.md) |
-| 2 | **Parte Prática** (aplicação + Airtable + automação) | código neste repositório + [`evidencias/`](evidencias/) |
-| 3 | **Vídeo Pitch** | _(inserir link)_ |
-
-Prints do sistema funcionando em [`evidencias/`](evidencias/) — e uma [demonstração navegável do dashboard](https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada) com os dados coletados:
-
-![Dashboard](evidencias/01-dashboard.png)
+| 1 | Parte Teórica | [`docs/parte-teorica.md`](docs/parte-teorica.md) |
+| 2 | Parte Prática (aplicação, Airtable e automação) | código deste repositório e [`evidencias/`](evidencias/) |
+| 3 | Vídeo Pitch | _(inserir link)_ |
 
 ---
 
@@ -266,20 +265,18 @@ Prints do sistema funcionando em [`evidencias/`](evidencias/) — e uma [demonst
 
 ```
 central-integracao/
-├── README.md                  ← este arquivo
-├── app.py                     ← rotas Flask, fluxo de sincronização, API própria
-├── config.py                  ← carrega .env (tokens, limites, cidades, moedas)
+├── README.md
+├── app.py                     rotas, fluxo de sincronização e API própria
+├── config.py                  lê o .env
 ├── services/
-│   ├── cotacoes.py            ← integração AwesomeAPI
-│   ├── clima.py               ← integração Open-Meteo
-│   ├── airtable.py            ← persistência (banco No-Code)
-│   └── automacao.py           ← regras de alerta
-├── templates/dashboard.html   ← interface
+│   ├── cotacoes.py            AwesomeAPI
+│   ├── clima.py               Open-Meteo e mapa de códigos WMO
+│   ├── airtable.py            leitura e gravação no Airtable
+│   └── automacao.py           regras de alerta
+├── templates/dashboard.html
 ├── static/style.css
-├── docs/parte-teorica.md      ← Parte Teórica (entregável 1)
-├── evidencias/                ← prints que comprovam o sistema funcionando
-├── .env.example               ← modelo de configuração (sem segredos)
+├── docs/parte-teorica.md      Parte Teórica
+├── evidencias/                prints do sistema funcionando
+├── .env.example
 └── requirements.txt
 ```
-
-**Tecnologias:** Python, Flask, Requests, Airtable (banco No-Code), AwesomeAPI, Open-Meteo.

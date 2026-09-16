@@ -10,7 +10,7 @@ Linha de estado em palavras (colorida pela pior severidade), tiles de câmbio co
 
 ## Integração com as APIs externas
 
-### `GET /api/ao-vivo` — resposta das duas APIs já tratada (strings → números, código WMO → texto)
+### `GET /api/ao-vivo`: resposta das duas APIs já tratada (strings → números, código WMO → texto)
 ![API ao vivo](02-api-ao-vivo.png)
 
 ## Dados persistidos no Airtable, lidos pela API própria
@@ -18,7 +18,7 @@ Linha de estado em palavras (colorida pela pior severidade), tiles de câmbio co
 ### `GET /api/cotacoes`
 ![API cotações](03-api-cotacoes.png)
 
-### `GET /api/alertas` — alerta criado pela automação e resolvido pelo dashboard (`Resolvido: true`)
+### `GET /api/alertas`: alerta criado pela automação e resolvido pelo dashboard (`Resolvido: true`)
 ![API alertas](04-api-alertas.png)
 
 ## Banco No-Code (Airtable)

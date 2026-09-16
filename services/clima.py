@@ -1,4 +1,4 @@
-"""Integração com a Open-Meteo (clima) — API pública, sem autenticação."""
+"""Integração com a Open-Meteo (clima). API pública, sem autenticação."""
 from datetime import datetime, timezone
 import requests
 

@@ -56,7 +56,7 @@ def _alerta_clima(c, titulo, sev, valor, limite):
         "Tipo": "Clima",
         "Severidade": sev,
         "Mensagem": f"{c['cidade']}: {c['temperatura']}°C, sensação {c['sensacao']}°C, "
-                    f"umidade {c['umidade']}%, chuva {c['chuva']} mm — {c['condicao']}.",
+                    f"umidade {c['umidade']}%, chuva {c['chuva']} mm ({c['condicao']}).",
         "Valor": valor,
         "Limite": limite,
         "CriadoEm": _agora(),
