@@ -2,7 +2,7 @@
 
 **Projeto:** Central Inteligente de Monitoramento: Integrando APIs para Automatizar Processos e Gerar Insights
 **Disciplina:** Integração e API – UNIFECAF, 2º semestre
-**Aluno:** Kenedy Pereira
+**Aluno:** Kennedy Pereira
 
 ---
 

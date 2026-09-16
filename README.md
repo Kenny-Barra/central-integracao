@@ -45,7 +45,7 @@ Aplicação web em Python + Flask que consome duas APIs públicas (cotações de
 
 - **Vídeo Pitch (YouTube):** _(inserir link)_
 - **Demonstração do dashboard (com os dados coletados):** https://claude.ai/code/artifact/5ed94314-b08d-46fe-b489-ef82ea3a6ada
-- **Base no Airtable (somente leitura):** _(inserir link)_
+- **Base no Airtable (somente leitura):** https://airtable.com/app78Cm7BMlZ0RrJ0/shrzYA7GZZ82gmY6L
 - **Documentação das APIs:** [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas), [Open-Meteo](https://open-meteo.com/en/docs), [Airtable Web API](https://airtable.com/developers/web/api/introduction)
 
 ---
